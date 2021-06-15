@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <application>
+    <env>production</env>
+    <name>Air-Pollution-Streamr</name>
+    <version>${project.version}</version>
+    <artifactId>${project.artifactId}</artifactId>
+  </application>
+</configuration>
