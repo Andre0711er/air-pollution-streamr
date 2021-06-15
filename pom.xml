@@ -13,6 +13,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+    <commons-collections.version>3.2.2</commons-collections.version>
     <commons-configuration.version>1.10</commons-configuration.version>
     <logback-classic.version>1.3.0-alpha5</logback-classic.version>
     <quartz.version>2.3.2</quartz.version>
@@ -27,6 +28,11 @@
       <groupId>commons-configuration</groupId>
       <artifactId>commons-configuration</artifactId>
       <version>${commons-configuration.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-collections</groupId>
+      <artifactId>commons-collections</artifactId>
+      <version>${commons-collections.version}</version>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
