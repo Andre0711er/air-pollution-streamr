@@ -15,7 +15,7 @@ public class Backend extends AbstractDaemon {
     addTask(new com.marthalerit.cron.Cron());
   }
 
-  public static void main(String... args) throws Exception {
+  public static void main(String... args) {
     Backend backend = new Backend();
     backend.start();
   }
