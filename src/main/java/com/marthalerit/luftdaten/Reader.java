@@ -83,19 +83,28 @@ public class Reader implements Job {
             }
           });
           redis.set(lastModifiedKey, lastModifiedDetected);
+          streamrClient.disconnect();
+          streamrClient = null;
         }
       }
     }
   }
 
+  private StreamrClient streamrClient = null;
+  private Stream stream = null;
+
+  private void initStreamr() throws IOException {
+    if (streamrClient == null) {
+      final String privateKey = Config.get("streamr.key");
+      streamrClient = new StreamrClient(new EthereumAuthenticationMethod(privateKey));
+      stream = streamrClient.getStream(Config.get("streamr.stream"));
+    }
+  }
+
   public void streamr(final String message) throws IOException {
+    initStreamr();
     final Map map = new Gson().fromJson(message, Map.class);
-
-    final String privateKey = Config.get("streamr.key");
-    final StreamrClient client = new StreamrClient(new EthereumAuthenticationMethod(privateKey));
-    final Stream stream = client.getStream(Config.get("streamr.stream"));
-
-    client.publish(stream, map);
+    streamrClient.publish(stream, map);
   }
 
   public static void main(String... args) throws URISyntaxException, IOException, InterruptedException {
