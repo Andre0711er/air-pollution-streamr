@@ -23,13 +23,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Reader implements Job {
   private final static Logger logger = Skeleton.getLogger(Reader.class);
-
-  private final String endpoint = "https://data.sensor.community/static/v2/data.json";
 
   public void execute(JobExecutionContext jExeCtx) {
     try {
@@ -47,9 +45,9 @@ public class Reader implements Job {
 
       final HttpClient client = HttpClient.newHttpClient();
       final HttpRequest.Builder request = HttpRequest.newBuilder()
-              .uri(new URI(endpoint))
-              .timeout(Duration.ofSeconds(10))
-              .GET();
+          .uri(new URI(Objects.requireNonNull(Config.get("sensors.endpoint"))))
+          .timeout(Duration.ofSeconds(10))
+          .GET();
       final String lastModifiedStored = redis.get(lastModifiedKey);
       if (lastModifiedStored != null) {
         request.header("If-Modified-Since", lastModifiedStored);
@@ -63,6 +61,7 @@ public class Reader implements Job {
         final String lastModifiedDetected = lastModified.get();
         if (lastModifiedStored == null || !lastModifiedStored.equals(lastModifiedDetected)) {
           logger.debug("Execute Request; get new data");
+          final AtomicReference<List<Map<String, Object>>> changes = new AtomicReference<>(new ArrayList<>());
           // get data from request
           JsonParser.parseString(response.body()).getAsJsonArray().forEach(data -> {
             try {
@@ -72,7 +71,11 @@ public class Reader implements Job {
               final String key = StringHelper.getHash(value);
               if (redis.get(key) == null) {
                 // send into streamr queue
-                streamr(value);
+                changes.get().add(new Gson().fromJson(data, Map.class));
+                if (changes.get().size() >= 500) {
+                  streamr(lastModifiedDetected, changes.get());
+                  changes.set(new ArrayList<>());
+                }
                 // add to redis set
                 final SetParams params = new SetParams().ex(600L);
                 redis.set(key, value, params);
@@ -82,9 +85,12 @@ public class Reader implements Job {
               logger.error(e.getMessage());
             }
           });
+
+          if (changes.get().size() > 0) {
+            streamr(lastModifiedDetected, changes.get());
+            changes.set(new ArrayList<>());
+          }
           redis.set(lastModifiedKey, lastModifiedDetected);
-          streamrClient.disconnect();
-          streamrClient = null;
         }
       }
     }
@@ -95,15 +101,17 @@ public class Reader implements Job {
 
   private void initStreamr() throws IOException {
     if (streamrClient == null) {
-      final String privateKey = Config.get("streamr.key");
+      final String privateKey = Objects.requireNonNull(Config.get("streamr.key"));
       streamrClient = new StreamrClient(new EthereumAuthenticationMethod(privateKey));
       stream = streamrClient.getStream(Config.get("streamr.stream"));
     }
   }
 
-  public void streamr(final String message) throws IOException {
+  public void streamr(final String timestamp, final List<Map<String, Object>> messages) throws IOException {
     initStreamr();
-    final Map map = new Gson().fromJson(message, Map.class);
+    final Map<String, Object> map = new HashMap();
+    map.put("date", timestamp);
+    map.put("data", messages);
     streamrClient.publish(stream, map);
   }
 
