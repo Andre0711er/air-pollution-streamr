@@ -72,7 +72,7 @@ public class Reader implements Job {
               if (redis.get(key) == null) {
                 // send into streamr queue
                 changes.get().add(new Gson().fromJson(data, Map.class));
-                if (changes.get().size() >= 500) {
+                if (changes.get().size() >= 1000) {
                   streamr(lastModifiedDetected, changes.get());
                   changes.set(new ArrayList<>());
                 }
