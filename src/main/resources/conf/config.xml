@@ -10,4 +10,8 @@
     <host>localhost</host>
     <port>6379</port>
   </redis>
+  <streamr>
+    <key>${env:STREAMR_KEY}</key>
+    <stream>0x39af8544314405d1a9c9a0384b3118dc7a4be8af/air-pollution-streamr</stream>
+  </streamr>
 </configuration>
